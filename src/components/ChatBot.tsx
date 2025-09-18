@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { useState, useRef, useEffect } from "react";
 import { Send, Bot, User, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -13,17 +14,20 @@ interface Message {
 }
 
 const ChatBot = () => {
+  const { t } = useTranslation();
   const [messages, setMessages] = useState<Message[]>([
     {
       id: 1,
-      text: "Hello! I'm your AI health assistant. I can help you with general health information, symptoms guidance, and wellness tips. How can I assist you today?",
+      text: t("bot.greeting"),
       isUser: false,
-      timestamp: new Date()
-    }
+      timestamp: new Date(),
+    },
   ]);
   const [inputValue, setInputValue] = useState("");
   const [isTyping, setIsTyping] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  const apiKey = import.meta.env.VITE_OPENAI_API_KEY;
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -33,22 +37,7 @@ const ChatBot = () => {
     scrollToBottom();
   }, [messages]);
 
-  const simulateResponse = (userMessage: string): string => {
-    const lowerMessage = userMessage.toLowerCase();
-    
-    if (lowerMessage.includes("fever") || lowerMessage.includes("temperature")) {
-      return "Fever can be a sign that your body is fighting an infection. For adults, a fever is generally considered 100.4°F (38°C) or higher. Stay hydrated, rest, and consider over-the-counter fever reducers. If fever persists over 3 days or reaches 103°F (39.4°C), please consult a healthcare provider.";
-    } else if (lowerMessage.includes("headache")) {
-      return "Headaches can have various causes including tension, dehydration, or stress. Try drinking water, resting in a quiet, dark room, and applying a cold or warm compress. If headaches are severe, frequent, or accompanied by other symptoms like vision changes, please seek medical attention.";
-    } else if (lowerMessage.includes("cough")) {
-      return "Coughs can be dry or productive and may indicate various conditions. Stay hydrated, use a humidifier, and avoid irritants. A persistent cough lasting more than 3 weeks, coughing up blood, or difficulty breathing requires medical evaluation.";
-    } else if (lowerMessage.includes("cold") || lowerMessage.includes("flu")) {
-      return "Common cold and flu symptoms include congestion, cough, and fatigue. Rest, stay hydrated, and wash hands frequently. Flu symptoms are typically more severe. Contact a healthcare provider if symptoms worsen or you have difficulty breathing.";
-    } else {
-      return "Thank you for your question. For specific medical concerns, I recommend consulting with a healthcare professional who can provide personalized advice based on your medical history and current condition. Is there any general health information I can help you with?";
-    }
-  };
-
+  // 🧠 Send user message to OpenAI
   const handleSendMessage = async () => {
     if (!inputValue.trim()) return;
 
@@ -56,24 +45,53 @@ const ChatBot = () => {
       id: Date.now(),
       text: inputValue,
       isUser: true,
-      timestamp: new Date()
+      timestamp: new Date(),
     };
 
-    setMessages(prev => [...prev, userMessage]);
+    setMessages((prev) => [...prev, userMessage]);
     setInputValue("");
     setIsTyping(true);
 
-    // Simulate AI processing time
-    setTimeout(() => {
+    try {
+      const response = await fetch("https://api.openai.com/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${apiKey}`,
+        },
+        body: JSON.stringify({
+          model: "gpt-4o-mini", // lightweight & fast model
+          messages: [{ role: "user", content: userMessage.text }],
+        }),
+      });
+
+      const data = await response.json();
+      console.log("API Response:", data);
+
+      const botText =
+        data?.choices?.[0]?.message?.content?.trim() ||
+        "⚠️ Sorry, I couldn’t understand that.";
+
       const botResponse: Message = {
         id: Date.now() + 1,
-        text: simulateResponse(inputValue),
+        text: botText,
         isUser: false,
-        timestamp: new Date()
+        timestamp: new Date(),
       };
-      setMessages(prev => [...prev, botResponse]);
+
+      setMessages((prev) => [...prev, botResponse]);
+    } catch (error) {
+      console.error("Error fetching AI response:", error);
+      const errorResponse: Message = {
+        id: Date.now() + 1,
+        text: "❌ Error connecting to AI server. Please check your API key or internet.",
+        isUser: false,
+        timestamp: new Date(),
+      };
+      setMessages((prev) => [...prev, errorResponse]);
+    } finally {
       setIsTyping(false);
-    }, 1500);
+    }
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
@@ -84,10 +102,10 @@ const ChatBot = () => {
   };
 
   const quickQuestions = [
-    "What are common cold symptoms?",
-    "How to reduce fever naturally?",
-    "When should I see a doctor for a headache?",
-    "What are signs of dehydration?"
+    t("chatbot.quick1"),
+    t("chatbot.quick2"),
+    t("chatbot.quick3"),
+    t("chatbot.quick4"),
   ];
 
   return (
@@ -95,11 +113,10 @@ const ChatBot = () => {
       <div className="container mx-auto px-4">
         <div className="text-center mb-12">
           <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-4">
-            AI Health Assistant
+            {t("chatbot.title")}
           </h2>
           <p className="text-muted-foreground max-w-2xl mx-auto">
-            Get instant answers to your health questions with our AI-powered assistant. 
-            Remember, this is for informational purposes only and doesn't replace professional medical advice.
+            {t("chatbot.description")}
           </p>
         </div>
 
@@ -161,7 +178,7 @@ const ChatBot = () => {
                 </div>
                 <div ref={messagesEndRef} />
               </ScrollArea>
-              
+
               <div className="border-t pt-4 mt-4">
                 <div className="flex flex-wrap gap-2 mb-4">
                   {quickQuestions.map((question, index) => (
@@ -181,7 +198,7 @@ const ChatBot = () => {
                     value={inputValue}
                     onChange={(e) => setInputValue(e.target.value)}
                     onKeyPress={handleKeyPress}
-                    placeholder="Ask about symptoms, treatments, or general health..."
+                    placeholder={t("chatbot.placeholder")}
                     className="flex-1"
                   />
                   <Button onClick={handleSendMessage} disabled={!inputValue.trim()}>
@@ -198,3 +215,6 @@ const ChatBot = () => {
 };
 
 export default ChatBot;
+
+
+

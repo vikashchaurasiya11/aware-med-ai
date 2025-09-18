@@ -1,0 +1,15 @@
+{
+  "bot": {
+    "greeting": "Hello! I'm your AI health assistant. How can I assist you today?"
+  },
+  "chatbot": {
+    "title": "AI Health Assistant",
+    "description": "Get instant answers to your health questions with our AI-powered assistant. This does not replace professional medical advice.",
+    "placeholder": "Ask about symptoms, treatments, or general health...",
+    "quick1": "What are common cold symptoms?",
+    "quick2": "How to reduce fever naturally?",
+    "quick3": "When should I see a doctor for a headache?",
+    "quick4": "What are signs of dehydration?"
+  }
+}
+
